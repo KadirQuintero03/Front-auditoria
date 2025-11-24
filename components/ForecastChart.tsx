@@ -52,18 +52,22 @@ export default function ForecastChart({ data, isLoading }: ForecastChartProps) {
       {
         label: "Temperatura Máxima (°C)",
         data: data.map((d) => d.tempMax),
-        borderColor: "hsl(var(--chart-1))",
-        backgroundColor: "hsla(var(--chart-1) / 0.1)",
+        borderColor: "#ff6b6b", // Mejor contraste
+        backgroundColor: "rgba(255, 107, 107, 0.2)",
         fill: true,
         tension: 0.4,
+        pointRadius: 4,
+        pointHoverRadius: 6,
       },
       {
         label: "Temperatura Mínima (°C)",
         data: data.map((d) => d.tempMin),
-        borderColor: "hsl(var(--chart-2))",
-        backgroundColor: "hsla(var(--chart-2) / 0.1)",
+        borderColor: "#4dabf7", // Mejor contraste
+        backgroundColor: "rgba(77, 171, 247, 0.2)",
         fill: true,
         tension: 0.4,
+        pointRadius: 4,
+        pointHoverRadius: 6,
       },
     ],
   }
@@ -75,35 +79,42 @@ export default function ForecastChart({ data, isLoading }: ForecastChartProps) {
       legend: {
         position: "top" as const,
         labels: {
-          color: "hsl(var(--foreground))",
+          color: "#e6e6e6", // Texto claro
           font: {
             family: "Geist",
+            size: 14,
           },
         },
       },
       tooltip: {
-        backgroundColor: "hsl(var(--card))",
-        titleColor: "hsl(var(--foreground))",
-        bodyColor: "hsl(var(--foreground))",
-        borderColor: "hsl(var(--border))",
+        backgroundColor: "rgba(30, 30, 30, 0.9)",
+        titleColor: "#fff",
+        bodyColor: "#ddd",
+        borderColor: "#444",
         borderWidth: 1,
       },
     },
     scales: {
       y: {
         grid: {
-          color: "hsla(var(--border) / 0.5)",
+          color: "rgba(255, 255, 255, 0.1)",
         },
         ticks: {
-          color: "hsl(var(--muted-foreground))",
+          color: "#b3b3b3",
+          font: {
+            size: 13,
+          },
         },
       },
       x: {
         grid: {
-          color: "hsla(var(--border) / 0.5)",
+          color: "rgba(255, 255, 255, 0.05)",
         },
         ticks: {
-          color: "hsl(var(--muted-foreground))",
+          color: "#b3b3b3",
+          font: {
+            size: 13,
+          },
         },
       },
     },
@@ -115,7 +126,7 @@ export default function ForecastChart({ data, isLoading }: ForecastChartProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.2 }}
     >
-      <Card className="p-6 bg-card">
+      <Card className="p-6 bg-card border border-white/10 shadow-xl">
         <h3 className="text-lg font-semibold text-foreground mb-4">Pronóstico Semanal</h3>
         <div className="h-80">
           <Line data={chartData} options={options} />

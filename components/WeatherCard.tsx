@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion"
 import { Card } from "@/components/ui/card"
-import { Cloud, CloudRain, CloudSnow, Sun, CloudFog, Wind, Droplets, Gauge, Eye, Loader2 } from "lucide-react"
+import { Cloud, CloudRain, CloudSnow, Sun, CloudFog, Wind, Droplets, Gauge, Eye, Loader2, MapPin, Navigation } from "lucide-react"
 import type { WeatherData } from "@/types/weather"
 
 interface WeatherCardProps {
@@ -35,7 +35,7 @@ export default function WeatherCard({ data, isLoading, apiSource }: WeatherCardP
     return (
       <Card className="p-8 bg-card">
         <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Busca una ciudad para ver el clima</p>
+          <p className="text-muted-foreground">Selecciona una ciudad para ver el clima</p>
         </div>
       </Card>
     )
@@ -49,10 +49,25 @@ export default function WeatherCard({ data, isLoading, apiSource }: WeatherCardP
         <div className="flex items-start justify-between mb-6">
           <div>
             <h2 className="text-3xl font-bold text-foreground mb-1">{data.city}</h2>
-            <p className="text-sm text-muted-foreground uppercase tracking-wider">API: {apiSource}</p>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <MapPin className="w-4 h-4" />
+              <span className="uppercase tracking-wider">
+                {data.country && `${data.country} • `}
+                API: {apiSource}
+              </span>
+            </div>
+            {data.lat && data.lon && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Lat: {data.lat.toFixed(4)}, Lon: {data.lon.toFixed(4)}
+              </p>
+            )}
           </div>
           <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10">
-            <WeatherIcon className="w-8 h-8 text-primary" />
+            {data.icon ? (
+              <img src={`https:${data.icon}`} alt={data.condition} className="w-16 h-16" />
+            ) : (
+              <WeatherIcon className="w-8 h-8 text-primary" />
+            )}
           </div>
         </div>
 
@@ -70,12 +85,14 @@ export default function WeatherCard({ data, isLoading, apiSource }: WeatherCardP
               <span className="text-sm text-muted-foreground">Sensación:</span>
               <span className="text-lg font-semibold text-foreground">{Math.round(data.feelsLike)}°C</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Min/Max:</span>
-              <span className="text-lg font-semibold text-foreground">
-                {Math.round(data.tempMin)}° / {Math.round(data.tempMax)}°
-              </span>
-            </div>
+            {data.tempMin !== undefined && data.tempMax !== undefined && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Min/Max:</span>
+                <span className="text-lg font-semibold text-foreground">
+                  {Math.round(data.tempMin)}° / {Math.round(data.tempMax)}°
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -84,7 +101,10 @@ export default function WeatherCard({ data, isLoading, apiSource }: WeatherCardP
             <Wind className="w-5 h-5 text-accent" />
             <div>
               <p className="text-xs text-muted-foreground">Viento</p>
-              <p className="text-sm font-semibold text-foreground">{data.wind} km/h</p>
+              <p className="text-sm font-semibold text-foreground">
+                {data.wind} km/h
+                {data.windDirection && ` ${data.windDirection}`}
+              </p>
             </div>
           </div>
 
@@ -112,6 +132,31 @@ export default function WeatherCard({ data, isLoading, apiSource }: WeatherCardP
             </div>
           </div>
         </div>
+
+        {/* Campos adicionales si están disponibles */}
+        {(data.cloudiness !== undefined || data.uv !== undefined) && (
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            {data.cloudiness !== undefined && (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                <Cloud className="w-5 h-5 text-accent" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Nubosidad</p>
+                  <p className="text-sm font-semibold text-foreground">{Math.round(data.cloudiness)}%</p>
+                </div>
+              </div>
+            )}
+
+            {data.uv !== undefined && (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                <Sun className="w-5 h-5 text-accent" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Índice UV</p>
+                  <p className="text-sm font-semibold text-foreground">{data.uv.toFixed(1)}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </Card>
     </motion.div>
   )

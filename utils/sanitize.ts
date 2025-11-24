@@ -30,13 +30,19 @@ export function validateWeatherResponse(data: any, source: string): void {
 
     // Validación específica por fuente
     if (source === "openweather") {
-        if (!data.main || !data.weather || !data.wind) {
-            throw new Error("Respuesta de OpenWeather con campos faltantes")
+        if (!data.message || !Array.isArray(data.message)) {
+            throw new Error("Respuesta de OpenWeather con formato inválido")
+        }
+        if (data.message.length === 0) {
+            throw new Error("OpenWeather no devolvió resultados")
         }
     } else if (source === "weatherapi") {
-        if (!data.location || !data.current) {
+        if (!data.message || !data.message.location || !data.message.current) {
             throw new Error("Respuesta de WeatherAPI con campos faltantes")
         }
+    } else if (source === "mock") {
+        // Validación básica para mock
+        console.log("[v0] Mock data - validación básica")
     }
 
     // Detectar intentos de inyección
@@ -45,7 +51,7 @@ export function validateWeatherResponse(data: any, source: string): void {
         console.warn("[v0] ⚠️ Intento de XSS detectado en respuesta de:", source)
     }
 
-    console.log("[v0] Validación completada para:", source)
+    console.log("[v0] ✅ Validación completada para:", source)
 }
 
 /**
@@ -54,4 +60,13 @@ export function validateWeatherResponse(data: any, source: string): void {
 export function sanitizeNumber(input: any, fallback = 0): number {
     const num = Number(input)
     return isNaN(num) ? fallback : num
+}
+
+/**
+ * Valida rangos numéricos
+ */
+export function validateRange(value: number, min: number, max: number, fieldName: string): void {
+    if (value < min || value > max) {
+        console.warn(`[v0] ⚠️ Valor fuera de rango para ${fieldName}: ${value} (esperado: ${min}-${max})`)
+    }
 }

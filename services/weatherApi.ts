@@ -1,8 +1,9 @@
 import { sanitizeData, validateWeatherResponse } from "../utils/sanitize"
-import type { WeatherData, ForecastData } from "../types/weather"
+import type { WeatherData, ForecastData, WeatherAPIResponse, OpenWeatherAPIResponse } from "../types/weather"
 
-const OPENWEATHER_BASE = "https://api.openweathermap.org/data/2.5"
-const WEATHERAPI_BASE = "https://api.weatherapi.com/v1"
+const BACKEND_BASE = process.env.NEXT_PUBLIC_BACKEND_BASE_URL || "https://lq3p60dt-3000.use2.devtunnels.ms"
+const WEATHER_API_ENDPOINT = process.env.NEXT_PUBLIC_WEATHER_API_ENDPOINT || "/api/weather"
+const OPENWEATHER_API_ENDPOINT = process.env.NEXT_PUBLIC_OPENWEATHER_API_ENDPOINT || "/api/openWeather"
 
 export async function fetchWeatherData(
     city: string,
@@ -29,47 +30,17 @@ export async function fetchForecast(
         return fetchMockForecast(city)
     }
 
-    if (apiSource === "openweather") {
-        return fetchOpenWeatherForecast(city)
-    }
-
-    return fetchWeatherApiForecast(city)
-}
-
-async function fetchOpenWeather(city: string): Promise<WeatherData> {
-    const apiKey = process.env.NEXT_PUBLIC_WEATHER_API_KEY || "demo"
-
-    const response = await fetch(
-        `${OPENWEATHER_BASE}/weather?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric&lang=es`,
-        { headers: { Accept: "application/json" } },
-    )
-
-    if (!response.ok) {
-        throw new Error(`Error HTTP ${response.status}: ${response.statusText}`)
-    }
-
-    const data = await response.json()
-
-    validateWeatherResponse(data, "openweather")
-
-    return {
-        city: sanitizeData(data.name),
-        temp: data.main?.temp ?? 0,
-        feelsLike: data.main?.feels_like ?? 0,
-        tempMin: data.main?.temp_min ?? 0,
-        tempMax: data.main?.temp_max ?? 0,
-        condition: sanitizeData(data.weather?.[0]?.description ?? "desconocido"),
-        humidity: data.main?.humidity ?? 0,
-        pressure: data.main?.pressure ?? 0,
-        wind: data.wind?.speed ? Math.round(data.wind.speed * 3.6) : 0,
-        visibility: data.visibility ?? 0,
-    }
+    // Por ahora retornamos datos mock para el forecast
+    // Puedes implementar endpoints específicos en el backend más adelante
+    return fetchMockForecast(city)
 }
 
 async function fetchWeatherApiData(city: string): Promise<WeatherData> {
-    const apiKey = process.env.NEXT_PUBLIC_WEATHER_API_KEY_2 || "demo"
+    const url = `${BACKEND_BASE}${WEATHER_API_ENDPOINT}/${encodeURIComponent(city)}`
 
-    const response = await fetch(`${WEATHERAPI_BASE}/current.json?key=${apiKey}&q=${encodeURIComponent(city)}&lang=es`, {
+    console.log("[v0] Calling WeatherAPI:", url)
+
+    const response = await fetch(url, {
         headers: { Accept: "application/json" },
     })
 
@@ -77,110 +48,95 @@ async function fetchWeatherApiData(city: string): Promise<WeatherData> {
         throw new Error(`Error HTTP ${response.status}: ${response.statusText}`)
     }
 
-    const data = await response.json()
+    const data: WeatherAPIResponse = await response.json()
 
     validateWeatherResponse(data, "weatherapi")
 
+    const { location, current } = data.message
+
     return {
-        city: sanitizeData(data.location?.name),
-        temp: data.current?.temp_c ?? 0,
-        feelsLike: data.current?.feelslike_c ?? 0,
-        tempMin: data.current?.temp_c ?? 0,
-        tempMax: data.current?.temp_c ?? 0,
-        condition: sanitizeData(data.current?.condition?.text ?? "desconocido"),
-        humidity: data.current?.humidity ?? 0,
-        pressure: data.current?.pressure_mb ?? 0,
-        wind: data.current?.wind_kph ?? 0,
-        visibility: data.current?.vis_km ? data.current.vis_km * 1000 : 0,
+        city: sanitizeData(location.name),
+        country: sanitizeData(location.country),
+        lat: location.lat,
+        lon: location.lon,
+        temp: current.temp_c ?? 0,
+        feelsLike: current.feelslike_c ?? 0,
+        tempMin: current.temp_c ?? 0, // WeatherAPI no proporciona min/max en current
+        tempMax: current.temp_c ?? 0,
+        condition: sanitizeData(current.condition?.text ?? "desconocido"),
+        icon: current.condition?.icon,
+        humidity: current.humidity ?? 0,
+        pressure: current.pressure_mb ?? 0,
+        wind: current.wind_kph ?? 0,
+        windDirection: sanitizeData(current.wind_dir ?? ""),
+        cloudiness: current.cloud ?? 0,
+        visibility: current.vis_km ? current.vis_km * 1000 : 0,
+        uv: current.uv ?? 0,
     }
 }
 
-async function fetchOpenWeatherForecast(city: string): Promise<ForecastData[]> {
-    const apiKey = process.env.NEXT_PUBLIC_WEATHER_API_KEY || "demo"
+async function fetchOpenWeather(city: string): Promise<WeatherData> {
+    const url = `${BACKEND_BASE}${OPENWEATHER_API_ENDPOINT}/${encodeURIComponent(city)}`
 
-    const response = await fetch(
-        `${OPENWEATHER_BASE}/forecast?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric&lang=es`,
-        { headers: { Accept: "application/json" } },
-    )
+    console.log("[v0] Calling OpenWeather:", url)
 
-    if (!response.ok) {
-        throw new Error(`Error HTTP ${response.status}`)
-    }
-
-    const data = await response.json()
-
-    const dailyData: Record<string, { temps: number[] }> = {}
-
-    data.list?.forEach((item: any) => {
-        const date = new Date(item.dt * 1000).toLocaleDateString("es-ES", {
-            weekday: "short",
-            day: "numeric",
-        })
-
-        if (!dailyData[date]) {
-            dailyData[date] = { temps: [] }
-        }
-
-        dailyData[date].temps.push(item.main.temp)
+    const response = await fetch(url, {
+        headers: { Accept: "application/json" },
     })
 
-    return Object.entries(dailyData)
-        .map(([date, data]) => ({
-            date: sanitizeData(date),
-            tempMax: Math.max(...data.temps),
-            tempMin: Math.min(...data.temps),
-        }))
-        .slice(0, 7)
-}
-
-async function fetchWeatherApiForecast(city: string): Promise<ForecastData[]> {
-    const apiKey = process.env.NEXT_PUBLIC_WEATHER_API_KEY_2 || "demo"
-
-    const response = await fetch(
-        `${WEATHERAPI_BASE}/forecast.json?key=${apiKey}&q=${encodeURIComponent(city)}&days=7&lang=es`,
-        { headers: { Accept: "application/json" } },
-    )
-
     if (!response.ok) {
-        throw new Error(`Error HTTP ${response.status}`)
+        throw new Error(`Error HTTP ${response.status}: ${response.statusText}`)
     }
 
-    const data = await response.json()
+    const data: OpenWeatherAPIResponse = await response.json()
 
-    return (data.forecast?.forecastday || []).map((day: any) => ({
-        date: sanitizeData(
-            new Date(day.date).toLocaleDateString("es-ES", {
-                weekday: "short",
-                day: "numeric",
-            }),
-        ),
-        tempMax: day.day?.maxtemp_c ?? 0,
-        tempMin: day.day?.mintemp_c ?? 0,
-    }))
+    validateWeatherResponse(data, "openweather")
+
+    // OpenWeather devuelve un array de ubicaciones, tomamos la primera
+    if (!data.message || data.message.length === 0) {
+        throw new Error("No se encontraron resultados para esta ciudad")
+    }
+
+    const location = data.message[0]
+
+    // Nota: OpenWeather geocoding solo proporciona ubicación, no datos meteorológicos
+    // Deberías tener otro endpoint que proporcione el clima actual
+    // Por ahora, retornamos datos básicos de ubicación
+    return {
+        city: sanitizeData(location.name),
+        country: sanitizeData(location.country),
+        lat: location.lat,
+        lon: location.lon,
+        temp: 0, // Estos datos vendrían de otro endpoint
+        feelsLike: 0,
+        tempMin: 0,
+        tempMax: 0,
+        condition: "No disponible - Solo geocodificación",
+        humidity: 0,
+        pressure: 0,
+        wind: 0,
+        visibility: 0,
+    }
 }
 
 async function fetchMockWeather(city: string): Promise<WeatherData> {
-    const response = await fetch("/api/mock/malicious")
-
-    if (!response.ok) {
-        throw new Error("Error en API mock")
-    }
-
-    const data = await response.json()
-
-    validateWeatherResponse(data, "mock")
+    // Simulamos una respuesta
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
     return {
-        city: sanitizeData(data.city || city),
-        temp: typeof data.temp === "number" ? data.temp : 0,
-        feelsLike: typeof data.feelsLike === "number" ? data.feelsLike : 0,
-        tempMin: typeof data.tempMin === "number" ? data.tempMin : 0,
-        tempMax: typeof data.tempMax === "number" ? data.tempMax : 0,
-        condition: sanitizeData(data.condition || "desconocido"),
-        humidity: typeof data.humidity === "number" ? data.humidity : 0,
-        pressure: typeof data.pressure === "number" ? data.pressure : 0,
-        wind: typeof data.wind === "number" ? data.wind : 0,
-        visibility: typeof data.visibility === "number" ? data.visibility : 0,
+        city: sanitizeData(city),
+        country: "Mock",
+        temp: 20 + Math.random() * 15,
+        feelsLike: 18 + Math.random() * 15,
+        tempMin: 15 + Math.random() * 5,
+        tempMax: 25 + Math.random() * 10,
+        condition: "Soleado",
+        humidity: 50 + Math.random() * 30,
+        pressure: 1000 + Math.random() * 30,
+        wind: 5 + Math.random() * 20,
+        visibility: 8000 + Math.random() * 2000,
+        cloudiness: Math.random() * 100,
+        uv: Math.random() * 10,
     }
 }
 
@@ -197,14 +153,14 @@ async function fetchMockForecast(city: string): Promise<ForecastData[]> {
 
 export async function fetchAllApis(city: string): Promise<Record<string, WeatherData | null>> {
     const results = await Promise.allSettled([
-        fetchWeatherData(city, "openweather"),
         fetchWeatherData(city, "weatherapi"),
+        fetchWeatherData(city, "openweather"),
         fetchWeatherData(city, "mock"),
     ])
 
     return {
-        OpenWeather: results[0].status === "fulfilled" ? results[0].value : null,
-        WeatherAPI: results[1].status === "fulfilled" ? results[1].value : null,
+        WeatherAPI: results[0].status === "fulfilled" ? results[0].value : null,
+        OpenWeather: results[1].status === "fulfilled" ? results[1].value : null,
         Mock: results[2].status === "fulfilled" ? results[2].value : null,
     }
 }

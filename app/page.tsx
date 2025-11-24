@@ -8,20 +8,25 @@ import ForecastChart from "../components/ForecastChart"
 import ApiSelector from "../components/ApiSelector"
 import ErrorBanner from "../components/ErrorBanner"
 import AuditPanel from "../components/AuditPanel"
-import SearchBar from "../components/SearchBar"
+import CountrySelect from "../components/CountrySelect"
 import ApiComparison from "../components/ApiComparison"
 import { useWeather } from "../hooks/useWeather"
 import { useTheme } from "../hooks/useTheme"
 
 export default function Home() {
   const [city, setCity] = useState("Madrid")
-  const [selectedApi, setSelectedApi] = useState<"openweather" | "weatherapi" | "mock">("openweather")
+  const [selectedApi, setSelectedApi] = useState<"openweather" | "weatherapi" | "mock">("weatherapi")
   const { weatherData, forecast, isLoading, error, auditLogs, fetchWeather } = useWeather(city, selectedApi)
   const { isDark, toggleTheme } = useTheme()
 
-  const handleSearch = (newCity: string) => {
+  const handleCityChange = (newCity: string) => {
     setCity(newCity)
     fetchWeather(newCity, selectedApi)
+  }
+
+  const handleApiChange = (api: "openweather" | "weatherapi" | "mock") => {
+    setSelectedApi(api)
+    fetchWeather(city, api)
   }
 
   return (
@@ -72,8 +77,8 @@ export default function Home() {
 
           {/* Controls */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-            <SearchBar onSearch={handleSearch} isLoading={isLoading} />
-            <ApiSelector selected={selectedApi} onSelect={setSelectedApi} />
+            <CountrySelect selected={city} onSelect={handleCityChange} />
+            <ApiSelector selected={selectedApi} onSelect={handleApiChange} />
           </div>
 
           {/* Main Content */}
