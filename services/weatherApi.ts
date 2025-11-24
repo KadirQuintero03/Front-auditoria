@@ -111,7 +111,9 @@ async function fetchOpenWeather(city: string): Promise<WeatherData> {
         icon: message.weather[0]?.icon ? `https://openweathermap.org/img/wn/${message.weather[0].icon}@2x.png` : undefined,
         humidity: message.main.humidity ?? 0,
         pressure: message.main.pressure ?? 0,
-        wind: message.wind.speed ? message.wind.speed * 3.6 : 0, // Convertir m/s a km/h
+        wind: message.wind.speed
+            ? Number((message.wind.speed * 3.6).toFixed(1))
+            : 0, // Convertir m/s a km/h
         windDirection: message.wind.deg ? getWindDirection(message.wind.deg) : undefined,
         cloudiness: message.clouds?.all ?? 0,
         visibility: message.visibility ?? 0,
@@ -126,25 +128,45 @@ function getWindDirection(degrees: number): string {
 }
 
 async function fetchMockWeather(city: string): Promise<WeatherData> {
-    // Simulamos una respuesta
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // Alternativa 1: ataques XSS
+    const xssPayloads = [
+        "<script>alert('xss')</script>",
+        "<img src=x onerror=alert('xss')>",
+        "<svg/onload=alert('hack')>",
+    ];
+
+    // Alternativa 2: respuestas corruptas
+    const corruptValues = [
+        null,
+        {},
+        [],
+        "invalid",
+        9999999999,
+        "<b>wrong</b>"
+    ];
+
+    // Randomizar la respuesta maliciosa
+    const pick = (arr: any[]) => arr[Math.floor(Math.random() * arr.length)];
 
     return {
-        city: sanitizeData(city),
-        country: "Mock",
-        temp: 20 + Math.random() * 15,
-        feelsLike: 18 + Math.random() * 15,
-        tempMin: 15 + Math.random() * 5,
-        tempMax: 25 + Math.random() * 10,
-        condition: "Soleado",
-        humidity: 50 + Math.random() * 30,
-        pressure: 1000 + Math.random() * 30,
-        wind: 5 + Math.random() * 20,
-        visibility: 8000 + Math.random() * 2000,
-        cloudiness: Math.random() * 100,
-        uv: Math.random() * 10,
-    }
+        city: pick(xssPayloads),
+        country: pick(corruptValues),
+        temp: pick(corruptValues),
+        feelsLike: pick(corruptValues),
+        tempMin: pick(corruptValues),
+        tempMax: pick(corruptValues),
+        condition: pick(xssPayloads),
+        humidity: pick(corruptValues),
+        pressure: pick(corruptValues),
+        wind: pick(corruptValues),
+        visibility: pick(corruptValues),
+        cloudiness: pick(corruptValues),
+        uv: pick(corruptValues),
+    };
 }
+
 
 async function fetchMockForecast(city: string): Promise<ForecastData[]> {
     return Array.from({ length: 7 }, (_, i) => ({

@@ -26,11 +26,16 @@ export interface ForecastData {
 
 export interface AuditLog {
     id: string
-    timestamp: string
     message: string
-    status: "success" | "warning" | "error"
+    status: "success" | "warning" | "error" | "threat"
     latency: number
+    timestamp: string
+
+    // ➕ agrega estos:
+    apiSource: "openweather" | "weatherapi" | "mock"
+    threats?: string[]
 }
+
 
 // Respuestas del backend
 export interface WeatherAPIResponse {
@@ -122,6 +127,7 @@ export interface OpenWeatherCurrentResponse {
         cod: number
     }
 }
+
 // Países disponibles
 export interface Country {
     name: string

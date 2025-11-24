@@ -16,6 +16,7 @@ export default function AuditPanel({ logs }: AuditPanelProps) {
     total: logs.length,
     success: logs.filter((l) => l.status === "success").length,
     error: logs.filter((l) => l.status === "error").length,
+    threats: logs.filter((l) => l.status === "threat").length,
     avgLatency: logs.length > 0 ? Math.round(logs.reduce((sum, l) => sum + l.latency, 0) / logs.length) : 0,
   }
 
