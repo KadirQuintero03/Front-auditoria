@@ -1,5 +1,5 @@
 import { sanitizeData, validateWeatherResponse } from "../utils/sanitize"
-import type { WeatherData, ForecastData, WeatherAPIResponse, OpenWeatherAPIResponse } from "../types/weather"
+import type { WeatherData, ForecastData, WeatherAPIResponse, OpenWeatherAPIResponse, OpenWeatherCurrentResponse } from "../types/weather"
 
 const BACKEND_BASE = process.env.NEXT_PUBLIC_BACKEND_BASE_URL || "https://lq3p60dt-3000.use2.devtunnels.ms"
 const WEATHER_API_ENDPOINT = process.env.NEXT_PUBLIC_WEATHER_API_ENDPOINT || "/api/weather"
@@ -88,35 +88,41 @@ async function fetchOpenWeather(city: string): Promise<WeatherData> {
         throw new Error(`Error HTTP ${response.status}: ${response.statusText}`)
     }
 
-    const data: OpenWeatherAPIResponse = await response.json()
+    const data: OpenWeatherCurrentResponse = await response.json()
 
-    validateWeatherResponse(data, "openweather")
+    validateWeatherResponse(data, "openweather-current")
 
-    // OpenWeather devuelve un array de ubicaciones, tomamos la primera
-    if (!data.message || data.message.length === 0) {
-        throw new Error("No se encontraron resultados para esta ciudad")
-    }
+    const { message } = data
+    const tempCelsius = message.main.temp - 273.15 // Convertir Kelvin a Celsius
+    const feelsLikeCelsius = message.main.feels_like - 273.15
+    const tempMinCelsius = message.main.temp_min - 273.15
+    const tempMaxCelsius = message.main.temp_max - 273.15
 
-    const location = data.message[0]
-
-    // Nota: OpenWeather geocoding solo proporciona ubicación, no datos meteorológicos
-    // Deberías tener otro endpoint que proporcione el clima actual
-    // Por ahora, retornamos datos básicos de ubicación
     return {
-        city: sanitizeData(location.name),
-        country: sanitizeData(location.country),
-        lat: location.lat,
-        lon: location.lon,
-        temp: 0, // Estos datos vendrían de otro endpoint
-        feelsLike: 0,
-        tempMin: 0,
-        tempMax: 0,
-        condition: "No disponible - Solo geocodificación",
-        humidity: 0,
-        pressure: 0,
-        wind: 0,
-        visibility: 0,
+        city: sanitizeData(message.name),
+        country: sanitizeData(message.sys.country),
+        lat: message.coord.lat,
+        lon: message.coord.lon,
+        temp: tempCelsius,
+        feelsLike: feelsLikeCelsius,
+        tempMin: tempMinCelsius,
+        tempMax: tempMaxCelsius,
+        condition: sanitizeData(message.weather[0]?.description ?? "desconocido"),
+        icon: message.weather[0]?.icon ? `https://openweathermap.org/img/wn/${message.weather[0].icon}@2x.png` : undefined,
+        humidity: message.main.humidity ?? 0,
+        pressure: message.main.pressure ?? 0,
+        wind: message.wind.speed ? message.wind.speed * 3.6 : 0, // Convertir m/s a km/h
+        windDirection: message.wind.deg ? getWindDirection(message.wind.deg) : undefined,
+        cloudiness: message.clouds?.all ?? 0,
+        visibility: message.visibility ?? 0,
     }
+}
+
+// Función auxiliar para convertir grados a dirección del viento
+function getWindDirection(degrees: number): string {
+    const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
+    const index = Math.round(degrees / 45) % 8
+    return directions[index]
 }
 
 async function fetchMockWeather(city: string): Promise<WeatherData> {

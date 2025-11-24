@@ -22,7 +22,7 @@ export function sanitizeData(input: string): string {
  * Valida que la respuesta de la API tenga la estructura esperada
  */
 export function validateWeatherResponse(data: any, source: string): void {
-    console.log("[v0] Validando respuesta de:", source)
+    console.log("[v0] Validando respuesta de:", source, data)
 
     if (!data || typeof data !== "object") {
         throw new Error(`Respuesta inválida de ${source}: no es un objeto`)
@@ -36,12 +36,27 @@ export function validateWeatherResponse(data: any, source: string): void {
         if (data.message.length === 0) {
             throw new Error("OpenWeather no devolvió resultados")
         }
+    } else if (source === "openweather-current") {
+        if (!data.message) {
+            throw new Error("Respuesta de OpenWeather sin campo 'message'")
+        }
+        if (!data.message.main) {
+            throw new Error("Respuesta de OpenWeather sin datos meteorológicos")
+        }
+        if (!data.message.coord) {
+            throw new Error("Respuesta de OpenWeather sin coordenadas")
+        }
     } else if (source === "weatherapi") {
-        if (!data.message || !data.message.location || !data.message.current) {
-            throw new Error("Respuesta de WeatherAPI con campos faltantes")
+        if (!data.message) {
+            throw new Error("Respuesta de WeatherAPI sin campo 'message'")
+        }
+        if (!data.message.location) {
+            throw new Error("Respuesta de WeatherAPI sin campo 'location'")
+        }
+        if (!data.message.current) {
+            throw new Error("Respuesta de WeatherAPI sin campo 'current'")
         }
     } else if (source === "mock") {
-        // Validación básica para mock
         console.log("[v0] Mock data - validación básica")
     }
 

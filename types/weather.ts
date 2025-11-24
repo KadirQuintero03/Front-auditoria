@@ -75,6 +75,53 @@ export interface OpenWeatherAPIResponse {
     message: OpenWeatherLocation[]
 }
 
+// Respuesta del endpoint de clima actual de OpenWeather
+export interface OpenWeatherCurrentResponse {
+    message: {
+        coord: {
+            lon: number
+            lat: number
+        }
+        weather: Array<{
+            id: number
+            main: string
+            description: string
+            icon: string
+        }>
+        base: string
+        main: {
+            temp: number // Kelvin
+            feels_like: number // Kelvin
+            temp_min: number // Kelvin
+            temp_max: number // Kelvin
+            pressure: number
+            humidity: number
+            sea_level?: number
+            grnd_level?: number
+        }
+        visibility: number
+        wind: {
+            speed: number // m/s
+            deg: number
+            gust?: number
+        }
+        clouds: {
+            all: number
+        }
+        dt: number
+        sys: {
+            type: number
+            id: number
+            country: string
+            sunrise: number
+            sunset: number
+        }
+        timezone: number
+        id: number
+        name: string
+        cod: number
+    }
+}
 // Países disponibles
 export interface Country {
     name: string
